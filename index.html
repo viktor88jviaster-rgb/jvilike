@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>JviLike</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root {
+    --bg: var(--tg-theme-bg-color, #f6f5f1);
+    --card: var(--tg-theme-secondary-bg-color, #ffffff);
+    --text: var(--tg-theme-text-color, #14161f);
+    --hint: var(--tg-theme-hint-color, #6b7080);
+    --accent: #3b3bff;
+    --accent-text: #ffffff;
+    --pop: #ffd23f;
+    --line: color-mix(in srgb, var(--text) 12%, transparent);
+    --ok: #1f9d55;
+    --err: #d93a3a;
+    --r: 14px;
+    font-family: "Manrope", "Segoe UI", system-ui, -apple-system, sans-serif;
+    color-scheme: light dark;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); }
+  body { padding: env(safe-area-inset-top, 0) 0 calc(76px + env(safe-area-inset-bottom, 0)); font-size: 15px; line-height: 1.45; }
+  header { display: flex; justify-content: space-between; align-items: center; padding: 16px 16px 8px; }
+  h1 { margin: 0; font-size: 22px; letter-spacing: -.02em; font-weight: 800; }
+  .bal { background: var(--pop); color: #14161f; font-weight: 700; padding: 6px 12px; border-radius: 999px; font-size: 14px; border: 0; }
+  main { padding: 0 16px; }
+  section { display: none; }
+  section.on { display: block; }
+  .card { background: var(--card); border-radius: var(--r); padding: 14px; margin: 10px 0; }
+  .label { font-size: 13px; color: var(--hint); margin: 0 0 8px; }
+  .seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .seg button { border: 1.5px solid var(--line); background: transparent; color: var(--text); border-radius: 12px; padding: 10px 6px; font: inherit; font-weight: 600; cursor: pointer; }
+  .seg button small { display: block; font-weight: 500; color: var(--hint); font-size: 11px; }
+  .seg button.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
+  input[type=text], input[type=number] { width: 100%; font: inherit; color: var(--text); background: transparent; border: 1.5px solid var(--line); border-radius: 12px; padding: 12px; }
+  input:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  input[type=range] { width: 100%; accent-color: var(--accent); }
+  .row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .qty { font-size: 28px; font-weight: 800; letter-spacing: -.02em; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .chips button { border: 0; background: color-mix(in srgb, var(--text) 8%, transparent); color: var(--text); border-radius: 999px; padding: 6px 12px; font: inherit; font-size: 13px; cursor: pointer; }
+  .total { display: flex; justify-content: space-between; font-weight: 700; font-size: 17px; }
+  .err { color: var(--err); font-size: 13px; min-height: 18px; margin: 6px 2px 0; }
+  .cta { width: 100%; border: 0; background: var(--accent); color: var(--accent-text); font: inherit; font-weight: 700; padding: 15px; border-radius: 14px; font-size: 16px; cursor: pointer; }
+  .cta:disabled { opacity: .5; }
+  .order { display: flex; justify-content: space-between; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .order:last-child { border: 0; }
+  .order b { display: block; }
+  .order span { color: var(--hint); font-size: 13px; word-break: break-all; }
+  .st { font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px; height: fit-content; white-space: nowrap; }
+  .st.done { background: color-mix(in srgb, var(--ok) 18%, transparent); color: var(--ok); }
+  .st.run { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
+  .st.wait { background: color-mix(in srgb, var(--pop) 40%, transparent); }
+  .empty { text-align: center; color: var(--hint); padding: 28px 8px; }
+  nav { position: fixed; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: repeat(4, 1fr); background: var(--card); border-top: 1px solid var(--line); padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0)); }
+  nav button { border: 0; background: none; color: var(--hint); font: inherit; font-size: 12px; font-weight: 600; padding: 8px; cursor: pointer; border-radius: 10px; }
+  nav button.on { color: var(--accent); }
+  nav svg { display: block; margin: 0 auto 2px; }
+  .amounts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .amounts button { border: 1.5px solid var(--line); background: transparent; color: var(--text); font: inherit; font-weight: 700; padding: 14px 0; border-radius: 12px; cursor: pointer; }
+  .amounts button.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
+  .note { color: var(--hint); font-size: 12px; margin: 10px 2px; }
+  .toast { position: fixed; left: 16px; right: 16px; bottom: calc(86px + env(safe-area-inset-bottom, 0)); background: var(--text); color: var(--bg); padding: 12px 14px; border-radius: 12px; font-weight: 600; opacity: 0; transform: translateY(8px); transition: .2s; pointer-events: none; }
+  .toast.show { opacity: 1; transform: none; }
+  .task { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .task:last-child { border: 0; }
+  .task b { display: block; }
+  .task span { color: var(--hint); font-size: 13px; word-break: break-all; }
+  .task .rw { color: var(--ok); font-weight: 800; font-size: 15px; }
+  .task .go { border: 0; background: var(--accent); color: var(--accent-text); font: inherit; font-weight: 700; font-size: 13px; padding: 9px 12px; border-radius: 12px; cursor: pointer; white-space: nowrap; }
+  .task .go.alt { background: var(--pop); color: #14161f; }
+  .task .go:disabled { opacity: .5; cursor: default; }
+  @media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>JviLike</h1>
+  <button class="bal" id="balBtn" aria-label="Баланс">0 ₽</button>
+</header>
+
+<main>
+  <!-- ЗАКАЗ -->
+  <section id="tab-order" class="on">
+    <div class="card">
+      <p class="label">Что нужно</p>
+      <div class="seg" id="svcSeg" role="group" aria-label="Услуга"></div>
+    </div>
+
+    <div class="card">
+      <p class="label" id="linkLabel">Ссылка</p>
+      <input type="text" id="link" inputmode="url" autocomplete="off" placeholder="https://t.me/ваш_канал">
+      <div class="err" id="linkErr"></div>
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <p class="label" style="margin:0">Количество</p>
+        <span class="qty" id="qtyOut">100</span>
+      </div>
+      <input type="range" id="qtyRange" aria-label="Количество">
+      <div class="chips" id="chips"></div>
+    </div>
+
+    <div class="card">
+      <p class="label">Скорость</p>
+      <div class="seg" id="speedSeg" role="group" aria-label="Скорость">
+        <button data-k="1" class="on">Обычная<small>до 24 ч</small></button>
+        <button data-k="1.3" >Быстрая<small>до 3 ч · +30%</small></button>
+        <button data-k="0.9">Плавная<small>2–3 дня · −10%</small></button>
+      </div>
+    </div>
+
+    <div class="card total"><span>Итого</span><span id="total">0 ₽</span></div>
+    <div class="err" id="orderErr"></div>
+    <button class="cta" id="orderBtn">Заказать</button>
+    <p class="note">Результат зависит от поставщика; возможна частичная отписка/снятие реакций. Продвижение может нарушать правила Telegram и площадок — используйте на свой риск.</p>
+  </section>
+
+  <!-- ИСТОРИЯ -->
+  <section id="tab-history">
+    <div class="card" id="orders"></div>
+  </section>
+
+  <!-- БАЛАНС -->
+  <section id="tab-balance">
+    <div class="card">
+      <p class="label">Ваш баланс</p>
+      <div class="qty" id="balBig">0 ₽</div>
+    </div>
+    <div class="card">
+      <p class="label">Пополнить на</p>
+      <div class="amounts" id="amounts">
+        <button data-v="100">100 ₽</button><button data-v="300" class="on">300 ₽</button><button data-v="500">500 ₽</button>
+        <button data-v="1000">1000 ₽</button><button data-v="3000">3000 ₽</button><button data-v="5000">5000 ₽</button>
+      </div>
+    </div>
+    <button class="cta" id="topupBtn">Пополнить</button>
+  </section>
+
+  <!-- ЗАРАБОТАТЬ -->
+  <section id="tab-earn">
+    <div class="card">
+      <p class="label">Заработано</p>
+      <div class="qty" id="earnBig">0 ₽</div>
+      <div class="chips"><button id="wdBalance">На баланс заказов</button><button id="wdOut">Вывести</button></div>
+      <p class="note" style="margin:8px 0 0" id="wdNote"></p>
+    </div>
+    <p class="label" style="margin:14px 4px 0">Задания</p>
+    <div class="card" id="tasks"></div>
+    <p class="note">Награда начисляется после проверки. Если вы отпишетесь или уберёте реакцию в течение 7 дней, выплата отменяется.</p>
+  </section>
+</main>
+
+<nav>
+  <button class="on" data-tab="order"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Заказ</button>
+  <button data-tab="history"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>История</button>
+  <button data-tab="balance"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3 10h18"/></svg>Баланс</button>
+  <button data-tab="earn"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5h4a1.8 1.8 0 010 3.6h-4"/></svg>Заработать</button>
+</nav>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+/* ===== НАСТРОЙКА =====
+   API_URL — адрес вашего бэкенда (см. README). Пока пусто — приложение работает в демо-режиме. */
+const API_URL = "";
+
+const SERVICES = [
+  { id: "subs",  name: "Подписчики", note: "канал/группа", price: 120, min: 50,  max: 10000, step: 10, ph: "https://t.me/ваш_канал", presets: [100, 500, 1000, 5000] },
+  { id: "likes", name: "Реакции",    note: "на пост",      price: 45,  min: 50,  max: 20000, step: 10, ph: "https://t.me/ваш_канал/123", presets: [100, 500, 1000, 5000] },
+  { id: "views", name: "Просмотры",  note: "на пост",      price: 8,   min: 100, max: 100000, step: 100, ph: "https://t.me/ваш_канал/123", presets: [1000, 5000, 10000, 50000] },
+];
+
+const tg = window.Telegram && Telegram.WebApp;
+if (tg) { tg.ready(); tg.expand(); }
+const initData = tg ? tg.initData : "";
+
+const state = { svc: SERVICES[0], qty: 100, speed: 1, topup: 300, balance: 0, orders: [] };
+const $ = s => document.querySelector(s);
+const fmt = n => new Intl.NumberFormat("ru-RU").format(Math.round(n)) + " ₽";
+
+async function api(path, body) {
+  if (!API_URL) return demoApi(path, body);
+  const r = await fetch(API_URL + path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ initData, ...body })
+  });
+  const j = await r.json();
+  if (!r.ok) throw new Error(j.error || "Ошибка сервера");
+  return j;
+}
+
+/* Демо-режим: данные хранятся только в памяти страницы */
+function demoApi(path, body) {
+  if (path === "/me") return { balance: state.balance, orders: state.orders };
+  if (path === "/order") {
+    if (body.cost > state.balance) throw new Error("Недостаточно средств. Пополните баланс.");
+    state.balance -= body.cost;
+    state.orders.unshift({ id: Date.now(), svc: body.svc, qty: body.qty, link: body.link, cost: body.cost, status: "wait" });
+    return { balance: state.balance, orders: state.orders };
+  }
+  if (path === "/topup") { state.balance += body.amount; return { balance: state.balance, orders: state.orders }; }
+  return earnDemo(path, body);
+}
+
+function cost() { return state.svc.price * state.qty / 1000 * state.speed; }
+
+function renderServices() {
+  $("#svcSeg").innerHTML = SERVICES.map(s =>
+    `<button data-id="${s.id}" class="${s.id === state.svc.id ? "on" : ""}">${s.name}<small>${fmt(s.price)} / 1000</small></button>`).join("");
+}
+function applyService() {
+  const s = state.svc;
+  const r = $("#qtyRange");
+  r.min = s.min; r.max = s.max; r.step = s.step;
+  state.qty = Math.min(Math.max(state.qty, s.min), s.max);
+  r.value = state.qty;
+  $("#link").placeholder = s.ph;
+  $("#linkLabel").textContent = s.id === "subs" ? "Ссылка на канал или группу" : "Ссылка на пост";
+  $("#chips").innerHTML = s.presets.map(p => `<button data-q="${p}">${new Intl.NumberFormat("ru-RU").format(p)}</button>`).join("");
+  renderServices(); update();
+}
+function update() {
+  $("#qtyOut").textContent = new Intl.NumberFormat("ru-RU").format(state.qty);
+  $("#total").textContent = fmt(cost());
+  $("#balBtn").textContent = fmt(state.balance);
+  $("#balBig").textContent = fmt(state.balance);
+}
+
+function validLink(v) {
+  const m = v.trim().match(/^(?:https?:\/\/)?(?:t\.me|telegram\.me)\/(?:\+|c\/)?([A-Za-z0-9_\-]{4,})(?:\/(\d+))?\/?$/);
+  if (!m) return "Нужна ссылка вида t.me/название";
+  if (state.svc.id !== "subs" && !m[2]) return "Для реакций и просмотров укажите ссылку на конкретный пост";
+  return "";
+}
+
+const STATUS = { wait: ["В очереди", "wait"], run: ["Выполняется", "run"], done: ["Готово", "done"] };
+function renderOrders() {
+  const box = $("#orders");
+  if (!state.orders.length) { box.innerHTML = `<div class="empty">Заказов пока нет.<br>Оформите первый на вкладке «Заказ».</div>`; return; }
+  box.innerHTML = state.orders.map(o => {
+    const [t, c] = STATUS[o.status] || STATUS.wait;
+    const name = (SERVICES.find(s => s.id === o.svc) || {}).name || o.svc;
+    return `<div class="order"><div><b>${name} · ${new Intl.NumberFormat("ru-RU").format(o.qty)}</b><span>${o.link.replace(/</g, "&lt;")}</span></div><div style="text-align:right"><div class="st ${c}">${t}</div><span>${fmt(o.cost)}</span></div></div>`;
+  }).join("");
+}
+function sync(d) { state.balance = d.balance; state.orders = d.orders; update(); renderOrders(); }
+
+function toast(msg) {
+  const t = $("#toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove("show"), 2400);
+}
+function haptic(type) { try { tg && tg.HapticFeedback.notificationOccurred(type); } catch (e) {} }
+
+/* События */
+$("#svcSeg").onclick = e => {
+  const b = e.target.closest("button"); if (!b) return;
+  state.svc = SERVICES.find(s => s.id === b.dataset.id); $("#linkErr").textContent = ""; applyService();
+};
+$("#speedSeg").onclick = e => {
+  const b = e.target.closest("button"); if (!b) return;
+  [...$("#speedSeg").children].forEach(x => x.classList.toggle("on", x === b));
+  state.speed = parseFloat(b.dataset.k); update();
+};
+$("#qtyRange").oninput = e => { state.qty = +e.target.value; update(); };
+$("#chips").onclick = e => {
+  const b = e.target.closest("button"); if (!b) return;
+  state.qty = Math.min(+b.dataset.q, state.svc.max); $("#qtyRange").value = state.qty; update();
+};
+$("#amounts").onclick = e => {
+  const b = e.target.closest("button"); if (!b) return;
+  [...$("#amounts").children].forEach(x => x.classList.toggle("on", x === b));
+  state.topup = +b.dataset.v;
+};
+document.querySelector("nav").onclick = e => {
+  const b = e.target.closest("button"); if (!b) return;
+  document.querySelectorAll("nav button").forEach(x => x.classList.toggle("on", x === b));
+  document.querySelectorAll("section").forEach(s => s.classList.toggle("on", s.id === "tab-" + b.dataset.tab));
+};
+$("#balBtn").onclick = () => document.querySelector('nav [data-tab=balance]').click();
+
+$("#orderBtn").onclick = async () => {
+  const link = $("#link").value;
+  const err = validLink(link);
+  $("#linkErr").textContent = err; $("#orderErr").textContent = "";
+  if (err) { haptic("error"); return; }
+  const btn = $("#orderBtn"); btn.disabled = true;
+  try {
+    const d = await api("/order", { svc: state.svc.id, qty: state.qty, speed: state.speed, link: link.trim(), cost: Math.round(cost() * 100) / 100 });
+    sync(d); haptic("success"); toast("Заказ принят");
+    $("#link").value = "";
+    document.querySelector('nav [data-tab=history]').click();
+  } catch (e) {
+    $("#orderErr").textContent = e.message; haptic("error");
+  } finally { btn.disabled = false; }
+};
+
+$("#topupBtn").onclick = async () => {
+  if (API_URL) {
+    try {
+      const d = await api("/topup", { amount: state.topup });
+      if (d.pay_url) { tg ? tg.openLink(d.pay_url) : window.open(d.pay_url, "_blank"); return; }
+      sync(d);
+    } catch (e) { toast(e.message); }
+  } else {
+    sync(await api("/topup", { amount: state.topup }));
+    toast("Демо: баланс пополнен на " + fmt(state.topup));
+  }
+};
+
+/* ===== ЗАРАБОТОК НА ЗАДАНИЯХ ===== */
+const MIN_WITHDRAW = 30;
+const TASK_TYPES = { subs: "Подписаться на канал", likes: "Поставить реакцию", views: "Посмотреть пост" };
+const fmt2 = n => new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 2 }).format(n) + " ₽";
+state.earned = 0;
+state.tasks = [
+  { id: 1, type: "subs",  reward: 6,  link: "https://t.me/example_channel_1" },
+  { id: 2, type: "subs",  reward: 8,  link: "https://t.me/example_channel_2" },
+  { id: 3, type: "subs",  reward: 5,  link: "https://t.me/example_channel_3" },
+  { id: 4, type: "subs",  reward: 10, link: "https://t.me/example_channel_4" },
+  { id: 5, type: "likes", reward: 2,  link: "https://t.me/example_channel_1/101" },
+  { id: 6, type: "likes", reward: 3,  link: "https://t.me/example_channel_2/57" },
+  { id: 7, type: "likes", reward: 2,  link: "https://t.me/example_channel_3/12" },
+  { id: 8, type: "views", reward: 1,  link: "https://t.me/example_channel_4/230" },
+  { id: 9, type: "views", reward: 1,  link: "https://t.me/example_channel_1/98" }
+];
+
+/* Демо-режим заданий (с бэкендом эти пути обслуживает сервер) */
+function earnDemo(path, body) {
+  const snap = () => ({ earned: state.earned, tasks: state.tasks, balance: state.balance, orders: state.orders });
+  const t = state.tasks.find(x => x.id === body.id);
+  if (path === "/tasks") return snap();
+  if (path === "/task/open") { if (t && !t.opened) t.opened = Date.now(); return snap(); }
+  if (path === "/task/check") {
+    if (!t || !t.opened) throw new Error("Сначала выполните задание по ссылке");
+    const need = t.type === "views" ? 10000 : 4000;
+    if (Date.now() - t.opened < need) throw new Error("Пока не засчитано, попробуйте через пару секунд");
+    t.done = true; state.earned += t.reward; return snap();
+  }
+  if (path === "/withdraw") {
+    if (state.earned < MIN_WITHDRAW) throw new Error("Минимум для вывода — " + fmt2(MIN_WITHDRAW));
+    if (body.to === "balance") state.balance += state.earned;
+    state.earned = 0; return snap();
+  }
+}
+
+function openLink(u) {
+  const url = /^https?:/.test(u) ? u : "https://" + u;
+  if (tg && /t\.me|telegram\.me/.test(url)) tg.openTelegramLink(url); else window.open(url, "_blank", "noopener");
+}
+
+function renderTasks() {
+  const box = $("#tasks");
+  const list = state.tasks.filter(t => !t.done);
+  if (!list.length) { box.innerHTML = `<div class="empty">Заданий пока нет.<br>Загляните позже.</div>`; return; }
+  box.innerHTML = list.map(t => {
+    const btn = t.opened
+      ? `<button class="go alt" data-act="check" data-id="${t.id}">Проверить</button>`
+      : `<button class="go" data-act="open" data-id="${t.id}">Выполнить</button>`;
+    return `<div class="task"><div><b>${TASK_TYPES[t.type]} · <span class="rw">+${fmt2(t.reward)}</span></b><span>${String(t.link).replace(/</g, "&lt;")}</span></div>${btn}</div>`;
+  }).join("");
+}
+
+function syncEarn(d) {
+  if (!d) return;
+  if (d.earned != null) state.earned = d.earned;
+  if (d.tasks) state.tasks = d.tasks;
+  if (d.balance != null) state.balance = d.balance;
+  if (d.orders) state.orders = d.orders;
+  $("#earnBig").textContent = fmt2(state.earned);
+  $("#wdNote").textContent = "Минимум для вывода — " + fmt2(MIN_WITHDRAW);
+  update(); renderTasks(); renderOrders();
+}
+
+$("#tasks").onclick = async e => {
+  const b = e.target.closest("button[data-act]"); if (!b) return;
+  const id = +b.dataset.id, t = state.tasks.find(x => x.id === id); if (!t) return;
+  const reward = t.reward;
+  b.disabled = true;
+  try {
+    if (b.dataset.act === "open") { openLink(t.link); syncEarn(await api("/task/open", { id })); }
+    else { syncEarn(await api("/task/check", { id })); haptic("success"); toast("Засчитано: +" + fmt2(reward)); }
+  } catch (err) { toast(err.message); haptic("error"); b.disabled = false; }
+};
+
+async function withdraw(to) {
+  try {
+    if (state.earned < MIN_WITHDRAW) throw new Error("Минимум для вывода — " + fmt2(MIN_WITHDRAW));
+    syncEarn(await api("/withdraw", { to }));
+    toast(to === "balance" ? "Переведено на баланс заказов" : "Заявка на вывод создана");
+    haptic("success");
+  } catch (e) { toast(e.message); haptic("error"); }
+}
+$("#wdBalance").onclick = () => withdraw("balance");
+$("#wdOut").onclick = () => withdraw("out");
+
+/* Старт */
+applyService();
+renderOrders();
+Promise.resolve(api("/me", {})).then(sync).catch(() => toast("Не удалось загрузить данные"));
+Promise.resolve(api("/tasks", {})).then(syncEarn).catch(() => {});
+</script>
+</body>
+</html>
